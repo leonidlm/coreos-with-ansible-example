@@ -1,0 +1,48 @@
+---
+- name: Launch all cluster instances
+  ec2:
+    image: "{{ aws.instance.image }}"
+    instance_type: "{{ aws.instance.type }}"
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    region: "{{ aws.region }}"
+    keypair: "{{ aws.keypair }}"
+    private_ip: >
+      {% set index = item | int %}{{ coreos.ip_template }}{{ coreos.ips_begin_at + index }}
+    vpc_subnet_id: "{{ vpc_metadata.subnets[0].id }}"
+    count_tag:
+      Name: "coreos-{{ item }}-{{ coreos.env }}"
+    instance_tags:
+      Name: "coreos-{{ item }}-{{ coreos.env }}"
+    group: [
+      'coreos-instance',
+      'coreos-instance-private',
+      'coreos-instance-public'
+    ]
+    volumes:
+      - device_name: /dev/xvda
+        volume_size: "{{ aws.instance.root_volume_size_gb }}"
+        device_type: gp2
+        delete_on_termination: true
+    wait: True
+    wait_timeout: 300
+    monitoring: no
+    exact_count: 1
+    assign_public_ip: yes
+    user_data: >
+      {{ lookup('file', cloudinit.results_dir + '/userdata-' + item) }}
+  with_sequence: "count={{ coreos.cluster_size }}"
+  register: ec2_info
+
+- name: Add coreos lead instance to ansible groups
+  add_host:
+    hostname: "{{ ec2_info.results[0].tagged_instances[0].public_ip }}"
+    groupname: coreos-lead
+
+- name: Wait for the new instances to listen on SSH port
+  wait_for:
+    state: started
+    host: "{{ item.tagged_instances[0].public_ip }}"
+    port: 22
+  with_items: ec2_info.results
+

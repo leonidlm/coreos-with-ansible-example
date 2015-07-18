@@ -1,0 +1,12 @@
+---
+- name: Create temporary ansible dir
+  file:
+    path: "{{ cloudinit.results_dir }}"
+    state: directory
+
+- name: Generate cloudinit files for all cluster nodes
+  template:
+    src: userdata.yml.j2
+    dest: "{{ cloudinit.results_dir }}/userdata-{{ item }}"
+  with_sequence: "count={{ coreos.cluster_size }}"
+

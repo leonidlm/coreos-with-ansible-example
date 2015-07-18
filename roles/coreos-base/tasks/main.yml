@@ -1,0 +1,8 @@
+---
+- name: Make sure the units directory exists
+  file:
+    path: "{{ coreos.units_dir }}"
+    state: directory
+    owner: core
+    group: core
+

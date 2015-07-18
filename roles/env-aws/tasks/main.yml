@@ -1,0 +1,30 @@
+---
+- name: Install boto
+  pip:
+    name=boto
+
+- fail:
+    msg: >
+      AWS access_key or secret_key aren't defined. Please export
+      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to your environment
+  when: (aws.access_key is not defined) or (aws.secret_key is not defined)
+
+- stat:
+    path: "{{ aws.public_keyfile }}"
+  register: secrets_exist
+
+- fail:
+    msg: "AWS public keyfile not found at '{{ aws.public_keyfile }}'"
+  when: secrets_exist.stat.exists == False
+
+- name: "Check ansible version"
+  shell: ansible --version| cut -d ' ' -f2
+  register: ansible_version
+
+- fail:
+    msg: "This role needs ansible >= 1.8.x"
+  when: ansible_version.stdout.find("1.8") == -1
+
+- include: cloudinit.yml
+
+- include: vpc.yml

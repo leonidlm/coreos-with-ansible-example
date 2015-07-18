@@ -1,0 +1,19 @@
+# Run with: ansible-playbook aws.yml -i "localhost,"
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  roles:
+    - env-aws
+
+# to the coreos cluster. Since each node in coreos cluster will submit jobs to
+# all the other cluster nodes, we need to provision only one node.
+- hosts: coreos-lead
+  gather_facts: no
+  vars:
+    ansible_ssh_private_key_file: "{{ playbook_dir }}/secrets/ansible-example.pem"
+  roles:
+    # install with `ansible-galaxy install defunctzombie.coreos-bootstrap`
+    - defunctzombie.coreos-bootstrap
+    - coreos-base
+

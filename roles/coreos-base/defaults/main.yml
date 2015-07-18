@@ -1,0 +1,4 @@
+---
+coreos:
+  units_dir: "/home/core/units/"
+

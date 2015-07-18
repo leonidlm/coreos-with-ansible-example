@@ -1,0 +1,22 @@
+---
+coreos:
+  env: "staging"
+  cluster_size: "{{ lookup('env', 'CLUSTER_SIZE') | default(3, true) }}"
+  ip_template: "172.22.1."
+  ips_begin_at: 10
+
+aws:
+  access_key: "{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
+  secret_key: "{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+  availability_zone: "us-east-1d"
+  region: "us-east-1"
+  keypair: ansible-example
+  public_keyfile: "{{ playbook_dir }}/secrets/ansible-example.pub"
+  instance:
+    image: "ami-6b1cd400"
+    type: "t2.micro"
+    root_volume_size_gb: 8
+
+cloudinit:
+  results_dir: "{{ playbook_dir }}/.cloudinit"
+

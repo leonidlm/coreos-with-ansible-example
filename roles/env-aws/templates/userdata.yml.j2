@@ -1,0 +1,28 @@
+#cloud-config
+# The item variable represents the currently processed coreos instance name.
+# To view all the available configuration options go to:
+# https://coreos.com/os/docs/latest/cloud-config.html
+coreos:
+  etcd2:
+    name: "coreos-{{ item }}-{{ coreos.env }}"
+    initial-cluster: "coreos-1-{{ coreos.env }}=http://172.22.1.11:2380,coreos-2-{{ coreos.env }}=http://172.22.1.12:2380,coreos-3-{{ coreos.env }}=http://172.22.1.13:2380"
+    initial-cluster-state: "new"
+    initial-cluster-token: "coreos-demo"
+    initial-advertise-peer-urls: "http://$private_ipv4:2380"
+    listen-peer-urls: "http://$private_ipv4:2380"
+    listen-client-urls: "http://$private_ipv4:2379,http://127.0.0.1:2379"
+    advertise-client-urls: "http://$private_ipv4:2379"
+    cluster-remove-delay: 300
+  fleet:
+    public-ip: $private_ipv4
+  update:
+    reboot-strategy: off
+    group: beta
+  units:
+    - name: etcd2.service
+      enable: true
+      command: start
+    - name: fleet.service
+      enable: true
+      command: start
+

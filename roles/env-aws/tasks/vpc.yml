@@ -1,0 +1,89 @@
+---
+- name: Create a VPC
+  ec2_vpc:
+    state: present
+    wait: yes
+    cidr_block: 172.22.0.0/16
+    resource_tags:
+      environment: "{{ coreos.env }}"
+      Name: "coreos-cluster-vpc"
+    ec2_access_key: "{{ aws.access_key }}"
+    ec2_secret_key: "{{ aws.secret_key }}"
+    subnets:
+      - cidr: 172.22.1.0/24
+        az: "{{ aws.availability_zone }}"
+        resource_tags:
+          environment: "{{ coreos.env }}"
+          tier: "coreos"
+    internet_gateway: True
+    route_tables:
+      - subnets:
+          - 172.22.1.0/24
+        routes:
+          - dest: 0.0.0.0/0
+            gw: igw
+    region: "{{ aws.region }}"
+  register: created_vpc
+
+- name: "Create the main instance security group"
+  ec2_group:
+    name: "coreos-instance"
+    description: CoreOS cluster main group
+    region: "{{ aws.region }}"
+    vpc_id: "{{ created_vpc.vpc.id }}"
+    ec2_access_key: "{{ aws.access_key }}"
+    ec2_secret_key: "{{ aws.secret_key }}"
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 0.0.0.0/0
+  register: coreos_instance_group
+
+- name: "Create security group for publicly accessible ports"
+  ec2_group:
+    name: "coreos-instance-public"
+    description: CoreOS cluster public accessible ports
+    region: "{{ aws.region }}"
+    vpc_id: "{{ created_vpc.vpc.id }}"
+    ec2_access_key: "{{ aws.access_key }}"
+    ec2_secret_key: "{{ aws.secret_key }}"
+    rules:
+      - proto: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: 0.0.0.0/0
+
+- name: "Create security group for private, inter-node communication"
+  ec2_group:
+    name: "coreos-instance-private"
+    description: CoreOS cluster internal communication
+    region: "{{ aws.region }}"
+    vpc_id: "{{ created_vpc.vpc.id }}"
+    ec2_access_key: "{{ aws.access_key }}"
+    ec2_secret_key: "{{ aws.secret_key }}"
+    rules:
+      # etcd
+      - proto: tcp
+        from_port: 2380
+        to_port: 2380
+        group_id: "{{ coreos_instance_group.group_id }}"
+      - proto: tcp
+        from_port: 2379
+        to_port: 2379
+        group_id: "{{ coreos_instance_group.group_id }}"
+
+- name: Import the instance ssh key
+  ec2_key:
+    name: "{{ aws.keypair }}"
+    state: present
+    region: "{{ aws.region }}"
+    aws_access_key: "{{ aws.access_key }}"
+    aws_secret_key: "{{ aws.secret_key }}"
+    key_material: "{{ item }}"
+  with_file: "{{ aws.public_keyfile }}"
+
+- include: instances.yml
+  vars:
+    vpc_metadata: "{{ created_vpc }}"
+
