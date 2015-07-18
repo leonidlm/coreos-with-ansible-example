@@ -1,0 +1,15 @@
+---
+cluster:
+  name: "{{ es.cluster_name }}"
+
+discovery:
+  zen:
+    ping:
+      multicast:
+        enabled: false
+      unicast:
+        hosts:
+          - "172.22.1.11:9300"
+          - "172.22.1.12:9300"
+          - "172.22.1.13:9300"
+

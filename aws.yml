@@ -16,4 +16,5 @@
     # install with `ansible-galaxy install defunctzombie.coreos-bootstrap`
     - defunctzombie.coreos-bootstrap
     - coreos-base
+    - coreos-es
 

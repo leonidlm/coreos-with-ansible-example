@@ -72,6 +72,16 @@
         from_port: 2379
         to_port: 2379
         group_id: "{{ coreos_instance_group.group_id }}"
+      # elasticsearch
+      - proto: tcp
+        from_port: 9200
+        to_port: 9200
+        group_id: "{{ coreos_instance_group.group_id }}"
+      - proto: tcp
+        from_port: 9300
+        to_port: 9300
+        group_id: "{{ coreos_instance_group.group_id }}"
+
 
 - name: Import the instance ssh key
   ec2_key:

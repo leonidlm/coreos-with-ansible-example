@@ -1,4 +1,5 @@
 ---
 coreos:
   units_dir: "/home/core/units/"
+  conf_dir: "/home/core/conf/"
 

@@ -6,3 +6,10 @@
     owner: core
     group: core
 
+- name: Make sure the conf directory exists
+  file:
+    path: "{{ coreos.conf_dir }}"
+    state: directory
+    owner: core
+    group: core
+

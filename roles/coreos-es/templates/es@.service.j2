@@ -1,0 +1,44 @@
+[Unit]
+Description=elasticsearch node
+After=docker.service
+Requires=docker.service
+
+[Service]
+# Disable start timeout. Pulling the docker image for the first time can take
+# awhile, it can vary based on where this unit is being run.
+TimeoutStartSec=0
+
+Restart=always
+
+EnvironmentFile=/etc/environment
+
+## Directives with "=-" are allowed to fail without consequences
+ExecStartPre=-/usr/bin/docker kill %p-%i
+ExecStartPre=-/usr/bin/docker rm %p-%i
+
+ExecStartPre=/usr/bin/mkdir -p /data/es
+ExecStartPre=/usr/bin/mkdir -p /config/es
+ExecStartPre=/usr/bin/docker pull elasticsearch:1.7
+
+ExecStartPre=/bin/bash -c '/usr/bin/etcdctl get /es/config/elasticsearch > /config/es/elasticsearch.yml'
+ExecStartPre=/bin/bash -c '/usr/bin/etcdctl get /es/config/logging > /config/es/logging.yml'
+
+ExecStart=/bin/bash -c '\
+  /usr/bin/docker run \
+    --name %p-%i \
+    --hostname %p-%i.cluster.local \
+    --publish 9200:9200 \
+    --publish 9300:9300 \
+    --volume /config/es:/usr/share/elasticsearch/config \
+    --volume /data/es:/usr/share/elasticsearch/data \
+    --env ES_HEAP_SIZE=512M \
+    elasticsearch:1.7 elasticsearch \
+      -Des.node.name=%p-%i \
+      -Des.network.publish_host=${COREOS_PRIVATE_IPV4}'
+
+ExecStop=/usr/bin/docker stop %p-%i
+ExecStop=/usr/bin/docker rm %p-%i
+
+[X-Fleet]
+X-Conflicts=%p@*.service
+

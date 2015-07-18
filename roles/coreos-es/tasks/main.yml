@@ -1,0 +1,40 @@
+---
+- name: Make sure the es conf directory exists
+  file:
+    path: "{{ coreos.conf_dir }}/es"
+    state: directory
+    owner: core
+    group: core
+
+- name: Upload elasticsearch configuration files
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ coreos.conf_dir }}/es/{{ item }}"
+  register: es_conf
+  with_items:
+    - "elasticsearch.yml"
+    - "logging.yml"
+
+- name: Upload the configuration to etcd
+  shell: >
+    etcdctl setdir /es && etcdcrl setdir /es/config;
+    cat {{coreos.conf_dir}}/es/elasticsearch.yml | etcdctl set /es/config/elasticsearch;
+    cat {{coreos.conf_dir}}/es/logging.yml | etcdctl set /es/config/logging;
+
+- name: Upload elasticsearch service units
+  template:
+    src: "es@.service.j2"
+    dest: "{{ coreos.units_dir }}/es@.service"
+  register: es_unit
+
+- name: Reload elasticsearch containers if the unit file have changed
+  shell: >
+    /usr/bin/fleetctl stop {{ coreos.units_dir }}es@{1,2,3} || true;
+    /usr/bin/fleetctl destroy {{ coreos.units_dir }}es@{1,2,3} || true;
+    /usr/bin/fleetctl submit {{ coreos.units_dir }}es@{1,2,3} &&
+    /usr/bin/fleetctl start {{ coreos.units_dir }}es@{1,2,3}
+  when: |
+    es_conf.results[0].changed == True or
+    es_conf.results[1].changed == True or
+    es_unit.changed == True
+
